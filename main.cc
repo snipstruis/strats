@@ -187,8 +187,10 @@ setup_info setup_game(int sockfd){
 	int  fd[2]={0,0};
 	char color[2]={0,0}; // red='R' blue='B' unset='\0'
 	char pieces[2][40];
+	memset(pieces,0,80); // zero initialize pieces
 
 	while(true){
+		printf(".");
 		fd_set tmp = master;
 		int const maxfd = max3(sockfd,fd[0],fd[1]);
 		int sel = select(maxfd+1, &tmp, NULL, NULL, NULL);
