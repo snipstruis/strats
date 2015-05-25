@@ -230,8 +230,8 @@ setup_info setup_game(int sockfd){
 						exit(-1);
 					}
 				}else{
-					int current = fd[0]==0?0:1;
-					int other   = fd[0]==0?1:0;
+					int current = fd[0]==i?0:1;
+					int other   = fd[0]==i?1:0;
 					handle_setup_messages(i,&color[current],&color[other],pieces[current]);
 
 					// if all data is now present
