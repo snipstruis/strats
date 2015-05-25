@@ -4,6 +4,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include "libstrat.h"
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -75,39 +77,6 @@ constexpr int max3(int const a, int const b, int const c){
 	return a>b?(a>c?a:c):(b>c?b:c);
 }
 
-bool validate_pieces(char* const buf, int size){
-	if(size<40) return false;
-	signed char _B=6, _F=1, _M=1,
-			    _9=1, _8=2, _7=3,
-				_6=4, _5=4, _4=4,
-				_3=5, _2=8, _1=1;
-	int p=0;
-	for(int i=0; i<size && p<40; i+=1){
-		switch(buf[i]){
-		case 'B':_B-=1;buf[p++]=buf[i];break;
-		case 'F':_F-=1;buf[p++]=buf[i];break;
-		case 'M':_M-=1;buf[p++]=buf[i];break;
-		case '9':_9-=1;buf[p++]=buf[i];break;
-		case '8':_8-=1;buf[p++]=buf[i];break;
-		case '7':_7-=1;buf[p++]=buf[i];break;
-		case '6':_6-=1;buf[p++]=buf[i];break;
-		case '5':_5-=1;buf[p++]=buf[i];break;
-		case '4':_4-=1;buf[p++]=buf[i];break;
-		case '3':_3-=1;buf[p++]=buf[i];break;
-		case '2':_2-=1;buf[p++]=buf[i];break;
-		case '1':_1-=1;buf[p++]=buf[i];break;
-		}
-	}
-	if(_B==0&&_F==0&&_M==0
-	 &&_9==0&&_8==0&&_7==0
-	 &&_6==0&&_5==0&&_4==0
-	 &&_3==0&&_2==0&&_1==0){
-		return true;
-	}else{
-		return false;
-	}
-}
-
 char assign_color(char other_color, char *buf, size_t size){
 	void* blue = memmem(buf,size,"BLUE",4);
 	void* red  = memmem(buf,size,"RED",3);
@@ -129,7 +98,7 @@ char assign_color(char other_color, char *buf, size_t size){
 	}
 }
 
-char buf[64];
+char buf[110];
 
 void handle_setup_messages(int fd, char* this_color, char* other_color, char* pieces){
 	if(*this_color==0){
@@ -275,40 +244,18 @@ int main(int argc, char** argv){
 
 	auto x = setup_game(sockfd);
 
-	printf("setup done:\n"
-		   "red (fd=%d)\n  %.*s\n  %.*s\n  %.*s\n  %.*s\n"
-		   "blue (fd=%d)\n  %.*s\n  %.*s\n  %.*s\n  %.*s\n",
-		   x.red_fd, 
-		   10, x.red_pieces, 
-		   10, x.red_pieces+10,
-		   10, x.red_pieces+20,
-		   10, x.red_pieces+30,
-		   x.blue_fd, 
-		   10, x.blue_pieces, 
-		   10, x.blue_pieces+10,
-		   10, x.blue_pieces+20,
-		   10, x.blue_pieces+30);
+	setup_map(x.red_pieces, x.blue_pieces);
+	
+	char pmap[110];
 
+	puts("\nred map");
+	print_red_map(pmap);
+	write(1,pmap,110);
 
-/*
-    while(1) {  // main accept() loop
-        sin_size = sizeof their_addr;
-        new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-        if (new_fd == -1) {
-            perror("accept");
-            continue;
-        }
+	puts("blue map");
+	print_blue_map(pmap);
+	write(1,pmap,110);
 
-        inet_ntop(their_addr.ss_family,
-            get_in_addr((struct sockaddr *)&their_addr),
-            s, sizeof s);
-        printf("server: got connection from %s\n", s);
-
-        if (send(new_fd, "Hello, world!", 13, 0) == -1)
-        perror("send");
-        close(new_fd);
-	}
-*/
-    return 0;
+	return 0;
 }
 
