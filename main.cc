@@ -146,7 +146,7 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 			send(fd,"RED",3,0);
 		}else{
 			printf("sent \"INVALID_COLOR\" to %d\n",fd);
-			send(fd,"INVALID_COLOR",7,0);
+			send(fd,"INVALID_COLOR",13,0);
 		}
 	}else if(*pieces==0){
 		// validate pieces
@@ -155,7 +155,7 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 			memcpy(pieces,buf,40);
 			send(fd,"OK",2,0);
 		}else{
-			send(fd,"INVALID_PIECE_SETUP",7,0);
+			send(fd,"INVALID_PIECE_SETUP",19,0);
 		}
 	}
 }
