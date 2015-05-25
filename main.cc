@@ -157,6 +157,9 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		}else{
 			send(fd,"INVALID_PIECE_SETUP",19,0);
 		}
+	} else {
+		send(fd,"Please_wait_for_other_player_to_finish",38,0);
+		recv(fd, buf, sizeof(buf),0);
 	}
 }
 
@@ -230,6 +233,7 @@ setup_info setup_game(int sockfd){
 						exit(-1);
 					}
 				}else{
+					printf("hier!!!");
 					int current = fd[0]==i?0:1;
 					int other   = fd[0]==i?1:0;
 					handle_setup_messages(i,&color[current],&color[other],pieces[current]);
@@ -251,7 +255,7 @@ setup_info setup_game(int sockfd){
 						memcpy(s.red_pieces,  pieces[red], 40);
 						memcpy(s.blue_pieces, pieces[blue], 40);
 						return s;
-					}
+					} 
 				}
 			}
 		}
