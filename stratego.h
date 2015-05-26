@@ -35,7 +35,27 @@ bool validate_pieces(char* const buf, int size){
 }
 
 char resolve_battle(char attacker,char defender){
-	return attacker;
+	assert(attacker=='M' || (attacker>='1'&&attacker<='9'));
+	assert(defender=='M' || defender=='F' || defender=='B' || (defender>='1'&&defender<='9'));
+
+	if(defender=='F') return attacker;
+
+	if(defender=='B'){
+		if(attacker=='3')
+			 return attacker; 
+		else return defender;
+	}
+
+	if(defender=='M'){
+		if(attacker=='1')
+		     return attacker;
+		else return defender;
+
+	}else if(attacker=='M'){
+		return attacker;
+
+	}else if(attacker==defender) return '0';
+	else return attacker>defender;
 }
 
 namespace Map{
