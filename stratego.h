@@ -34,6 +34,10 @@ bool validate_pieces(char* const buf, int size){
 	}
 }
 
+char resolve_battle(char attacker,char defender){
+	return attacker;
+}
+
 namespace Map{
 
 static char map[100];
@@ -41,7 +45,7 @@ static char buf[110];
 
 void setup_map(char* red_pieces, char* blue_pieces){
 	for(int i=0; i<40; i+=1){ map[i] = 0x80|blue_pieces[39-i]; }
-	memcpy(map+40,"..  ..  ....  ..  ..",20);
+	memcpy(map+40,"..~~..~~....~~..~~..",20);
 	memcpy(map+60,red_pieces,40);
 }
 
@@ -83,6 +87,25 @@ void send_blue_map(int fd){
 		*out++ = '\n';
 	}
 	write(fd,buf,110);
+}
+
+char get_red_piece(size_t index){
+	assert(index<100);
+	if(0x80&map[index] || map[index]=='.' || map[index]=='~')
+		 return 0;
+	else return map[index];
+}
+
+char get_blue_piece(size_t index){
+	assert(index<100);
+	if(!(0x80&map[index]) || map[index]=='.' || map[index]=='~')
+		 return 0;
+	else return map[index]&0x7F;
+}
+
+bool is_empty(int index){
+	assert(index<100);
+	return map[index]=='.';
 }
 
 }

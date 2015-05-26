@@ -22,6 +22,14 @@ inline void send_red     (int fd) {write(fd,"RED\n",4);}
 inline void send_blue    (int fd) {write(fd,"BLUE\n",5);}
 inline void send_start   (int fd) {write(fd,"START\n",6);}
 inline void send_wait    (int fd) {write(fd,"WAIT\n",5);}
+inline void send_win     (int fd) {write(fd,"WIN\n",4);}
+inline void send_lose    (int fd) {write(fd,"LOSE\n",5);}
+inline void send_empty   (int fd) {write(fd,"EMPTY\n",6);}
+inline void send_attack  (int fd, char a, char d, char v){
+	static char b[14];
+	sprintf(b,"ATTACK %c %c %c\n",a,d,v);
+	write(fd,b,13);
+}
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa){
@@ -144,14 +152,12 @@ int sanitized_recv(int fd){
 char assign_color(char other_color, char *buf, size_t size){
 	if( size==3 && memcmp(buf,"RED",3)==0 ){
 		if(other_color!='R')
-			return 'R';
-		else
-			return 'B';		
+			 return 'R';
+		else return 'B';		
 	}else if( size==4 && memcmp(buf,"BLUE",4)==0 ){
 		if(other_color!='B')
-			return 'B';
-		else
-			return 'R';
+			 return 'B';
+		else return 'R';
 	}else{
 		return 0;
 	}
@@ -283,6 +289,27 @@ setup_info setup_game(int sockfd){
 	}
 }
 
+bool is_in_lake(int source){
+	return source!=42 && source!=43 && source!=44 && source!=47
+		&& source!=52 && source!=52 && source!=54 && source!=57;
+}
+
+bool parse_move(char* buf, int* source, int* dest){
+	char sx,dx;
+	int  sy,dy;
+	if( sscanf(buf,"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
+	 && sx>='A' && sx<='J' && sy>=1 && sy <=10
+	 && dx>='A' && dx<='J' && dy>=1 && dy <=10){
+		sx-='A';
+		dx-='A';
+		sy-=1;
+		dy-=1;
+		*source = sy*10+sx;
+		*dest   = dy*10+dx;
+		return true;
+	}else return false;
+}
+
 int main(int argc, char** argv){
 	if(argc!=2){
 		printf("usage: %s [portnr]\n",argv[0]);
@@ -322,14 +349,81 @@ int main(int argc, char** argv){
 				||  (!red_turn && i==s.blue_fd) ){
 					// the one whose turn it is
 					int bytes_read = sanitized_recv(i);
-					if(bytes_read==0) continue;
+					if(bytes_read==0){
+						send_invalid(i);
+						continue;
+					}
 
-					// TODO handle move command here
-					send_ok(i);
+					buf[bytes_read] = '\0';
 
-					red_turn = !red_turn;
-					if(i==s.red_fd) Map::send_blue_map(s.blue_fd);
-					else Map::send_red_map(s.red_fd);
+					int source, dest;
+					if( parse_move(buf, &source, &dest)
+					 && !is_in_lake(source) 
+					 && !is_in_lake(dest)){
+						// source and dest are both valid tiles
+
+						char source_piece;
+						if(i==s.red_fd)
+							 source_piece = Map::get_red_piece(source);
+						else source_piece = Map::get_blue_piece(source);
+						
+						if(source_piece==0 || source_piece=='F' || source_piece=='B'){
+							send_invalid(i);
+							continue;
+						//}else if(source_piece=='2'){ // TODO: special scout rules
+						}else{
+							// source is an ordinary, movable unit
+							int r = source-dest;
+							if(r==1 || r==-1 || r==10 || r==-10){
+								if(Map::is_empty(dest)){
+									Map::map[dest]=Map::map[source];
+									Map::map[source]='.';
+									send_empty(s.red_fd);
+									send_empty(s.blue_fd);
+								}else{
+									char other = (i==s.red_fd)?s.blue_fd:s.red_fd;
+
+									char dest_piece;
+									if(i==s.red_fd)
+										 dest_piece = Map::get_blue_piece(dest);
+									else dest_piece = Map::get_red_piece(dest);
+
+									if(dest_piece == 0){
+										send_invalid(i);
+										continue;
+									}else if(dest_piece == 'F'){
+										send_win(i);
+										send_lose(other);
+										exit(0);
+									}else{
+										char victor = resolve_battle(source_piece,dest_piece);
+										if(victor==source_piece){
+											Map::map[dest] = Map::map[source];
+											Map::map[source] = '.';
+										}else if(victor==dest_piece){
+											Map::map[source] = '.';
+										}else{
+											Map::map[source] = '.';
+											Map::map[dest]   = '.';
+										}
+										send_attack(i,    source_piece,dest_piece,victor);
+										send_attack(other,source_piece,dest_piece,victor);
+									}
+								}
+							}else{
+								send_invalid(i);
+								continue;
+							}
+						}
+
+						// send map to other player
+						if(i==s.red_fd) Map::send_blue_map(s.blue_fd);
+						else Map::send_red_map(s.red_fd);
+
+						red_turn = !red_turn;
+					}else{
+						send_invalid(i);
+					}
 				}else{
 					clear_read_buf(i);
 					send_wait(i);
@@ -337,7 +431,6 @@ int main(int argc, char** argv){
 			}
 		}
 	}
-	
 	return 0;
 }
 
