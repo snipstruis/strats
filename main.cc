@@ -4,7 +4,7 @@
 #include <cerrno>
 #include <cstring>
 
-#include "libstrat.h"
+#include "stratego.h"
 
 #include <unistd.h>
 #include <sys/types.h>
