@@ -107,12 +107,12 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		*this_color = assign_color(*other_color, buf, bytes_read);
 		if(*this_color=='B'){
 			printf("assigned BLUE to %d\n",fd);
-			send(fd,"BLUE",4,0);
+			send(fd,"BLUE\n",5,0);
 		}else if(*this_color=='R'){
 			printf("assigned RED to %d\n",fd);
-			send(fd,"RED",3,0);
+			send(fd,"RED\n",4,0);
 		}else{
-			send(fd,"INVALID",7,0);
+			send(fd,"INVALID\n",8,0);
 		}
 	}else if(*pieces==0){
 		// validate pieces
@@ -120,9 +120,9 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		if(validate_pieces(buf,bytes_read)){
 			memcpy(pieces,buf,40);
 			printf("received valid piece setup from %d\n",fd);
-			send(fd,"OK",2,0);
+			send(fd,"OK\n",3,0);
 		}else{
-			send(fd,"INVALID",7,0);
+			send(fd,"INVALID\n",8,0);
 		}
 	} else {
 		// ignore other input
@@ -240,8 +240,8 @@ int main(int argc, char** argv){
 
 	auto s = setup_game(sockfd);
 
-	write(s.red_fd,"START",5);
-	write(s.blue_fd,"WAIT",4);
+	write(s.red_fd,"START\n",6);
+	write(s.blue_fd,"WAIT\n",5);
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
 	
