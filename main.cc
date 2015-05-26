@@ -77,21 +77,46 @@ constexpr int max3(int const a, int const b, int const c){
 	return a>b?(a>c?a:c):(b>c?b:c);
 }
 
+int sanitize(char *buf, int size){
+// Modifies the buffer, and returns the new size. This is always safe, since the 
+// sanitized text is always smaller than the original.
+// returns 0 if the buffer contains invalid character.
+	int out = 0;
+	bool prev_space = true;
+
+	for(int i=0; i<size; i+=1){
+		if(buf[i] <= ' '){
+			if(prev_space){
+				continue;
+			}else{
+				prev_space = true;
+				buf[out++] = buf[i];
+			}
+		}else if( (buf[i]>='A' && buf[i]<='Z') || (buf[i]>='0' && buf[i]<='9') ){
+			prev_space = false;
+			buf[out++] = buf[i];
+		}else{
+			return 0;
+		}
+	}
+
+	// remove trailing space if any
+	if(buf[out-1]<=' ') out-=1;
+
+	return out;
+}
+
 char assign_color(char other_color, char *buf, size_t size){
-	void* blue = memmem(buf,size,"BLUE",4);
-	void* red  = memmem(buf,size,"RED",3);
-	if(blue && !red){
-		if(other_color!='B'){
-			return 'B';
-		}else{
+	if( size==3 && memcmp(buf,"RED",3)==0 ){
+		if(other_color!='R')
 			return 'R';
-		}
-	}else if(red && !blue){
-		if(other_color!='R'){
-			return 'R';
-		}else{
+		else
+			return 'B';		
+	}else if( size==4 && memcmp(buf,"BLUE",4)==0 ){
+		if(other_color!='B')
 			return 'B';
-		}
+		else
+			return 'R';
 	}else{
 		return 0;
 	}
@@ -103,6 +128,11 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 	if(*this_color==0){
 		// receive preferred color
 		int bytes_read = recv(fd, buf, sizeof(buf),0);
+		bytes_read = sanitize(buf,bytes_read);
+		if(bytes_read == 0){
+			send(fd,"INVALID\n",8,0);
+			return;
+		}
 
 		*this_color = assign_color(*other_color, buf, bytes_read);
 		if(*this_color=='B'){
@@ -117,6 +147,9 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 	}else if(*pieces==0){
 		// validate pieces
 		int bytes_read = recv(fd, buf, sizeof(buf),0);	
+		bytes_read = sanitize(buf, bytes_read);
+		if(bytes_read==0){send(fd,"INVALID\n",8,0); return;}
+
 		if(validate_pieces(buf,bytes_read)){
 			memcpy(pieces,buf,40);
 			printf("received valid piece setup from %d\n",fd);
