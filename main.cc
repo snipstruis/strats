@@ -15,6 +15,13 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+inline void send_ok      (int fd) {write(fd,"OK\n",3);}
+inline void send_invalid (int fd) {write(fd,"INVALID\n",8);}
+inline void send_red     (int fd) {write(fd,"RED\n",4);}
+inline void send_blue    (int fd) {write(fd,"BLUE\n",5);}
+inline void send_start   (int fd) {write(fd,"START\n",6);}
+inline void send_wait    (int fd) {write(fd,"WAIT\n",5);}
+
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa){
     if (sa->sa_family == AF_INET) {
@@ -130,32 +137,32 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		int bytes_read = recv(fd, buf, sizeof(buf),0);
 		bytes_read = sanitize(buf,bytes_read);
 		if(bytes_read == 0){
-			send(fd,"INVALID\n",8,0);
+			send_invalid(fd);
 			return;
 		}
 
 		*this_color = assign_color(*other_color, buf, bytes_read);
 		if(*this_color=='B'){
 			printf("assigned BLUE to %d\n",fd);
-			send(fd,"BLUE\n",5,0);
+			send_blue(fd);
 		}else if(*this_color=='R'){
 			printf("assigned RED to %d\n",fd);
-			send(fd,"RED\n",4,0);
+			send_red(fd);
 		}else{
-			send(fd,"INVALID\n",8,0);
+			send_invalid(fd);
 		}
 	}else if(*pieces==0){
 		// validate pieces
 		int bytes_read = recv(fd, buf, sizeof(buf),0);	
 		bytes_read = sanitize(buf, bytes_read);
-		if(bytes_read==0){send(fd,"INVALID\n",8,0); return;}
+		if(bytes_read==0){send_invalid(fd); return;}
 
 		if(validate_pieces(buf,bytes_read)){
 			memcpy(pieces,buf,40);
 			printf("received valid piece setup from %d\n",fd);
-			send(fd,"OK\n",3,0);
+			send_ok(fd);
 		}else{
-			send(fd,"INVALID\n",8,0);
+			send_invalid(fd);
 		}
 	} else {
 		// ignore other input
@@ -273,8 +280,8 @@ int main(int argc, char** argv){
 
 	auto s = setup_game(sockfd);
 
-	write(s.red_fd,"START\n",6);
-	write(s.blue_fd,"WAIT\n",5);
+	send_start(s.red_fd);
+	send_wait(s.blue_fd);
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
 	
