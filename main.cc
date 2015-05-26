@@ -380,11 +380,14 @@ int main(int argc, char** argv){
 						if(source_piece==0 || source_piece=='F' || source_piece=='B'){
 							send_invalid(i);
 							continue;
-						//}else if(source_piece=='2'){ // TODO: special scout rules
+						}else if(source_piece=='2'){ // TODO: special scout rules
 						}else{
 							// source is an ordinary, movable unit
 							int r = source-dest;
-							if(r==1 || r==-1 || r==10 || r==-10){
+							if((r==  1&&(source%10!=9)) 
+							|| (r== -1&&(source%10!=0)) 
+							|| (r== 10&&(dest<100)) 
+							|| (r==-10&&(dest>=0))){
 								if(Map::is_empty(dest)){
 									Map::map[dest]=Map::map[source];
 									Map::map[source]='.';
