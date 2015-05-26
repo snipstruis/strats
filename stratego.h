@@ -1,4 +1,5 @@
 #pragma once
+#include <unistd.h>
 
 bool validate_pieces(char* const buf, int size){
 	if(size<40) return false;
@@ -33,7 +34,10 @@ bool validate_pieces(char* const buf, int size){
 	}
 }
 
+namespace Map{
+
 static char map[100];
+static char buf[110];
 
 void setup_map(char* red_pieces, char* blue_pieces){
 	for(int i=0; i<40; i+=1){ map[i] = 0x80|blue_pieces[39-i]; }
@@ -41,7 +45,8 @@ void setup_map(char* red_pieces, char* blue_pieces){
 	memcpy(map+60,red_pieces,40);
 }
 
-void print_red_map(char* out){
+void send_red_map(int fd){
+	char *out = buf;
 	for(int y=0; y<10; y+=1){
 		for(int x=0; x<10; x+=1){
 			int i = y*10+x;
@@ -57,9 +62,11 @@ void print_red_map(char* out){
 		}
 		*out++ = '\n';
 	}
+	write(fd,buf,110);
 }
 
-void print_blue_map(char* out){
+void send_blue_map(int fd){
+	char *out = buf;
 	for(int y=9; y>=0; y-=1){
 		for(int x=9; x>=0; x-=1){
 			int i = y*10+x;
@@ -75,4 +82,7 @@ void print_blue_map(char* out){
 		}
 		*out++ = '\n';
 	}
+	write(fd,buf,110);
+}
+
 }

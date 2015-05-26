@@ -238,19 +238,18 @@ int main(int argc, char** argv){
 
     printf("server: waiting for connections...\n");
 
-	auto x = setup_game(sockfd);
+	auto s = setup_game(sockfd);
 
-	setup_map(x.red_pieces, x.blue_pieces);
+	write(s.red_fd,"START",5);
+	write(s.blue_fd,"WAIT",4);
+
+	Map::setup_map(s.red_pieces, s.blue_pieces);
 	
-	char pmap[110];
-
 	puts("\nred map");
-	print_red_map(pmap);
-	write(1,pmap,110);
+	Map::send_red_map(1);
 
 	puts("\nblue map");
-	print_blue_map(pmap);
-	write(1,pmap,110);
+	Map::send_blue_map(1);
 
 	return 0;
 }
