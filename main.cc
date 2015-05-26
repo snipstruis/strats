@@ -283,7 +283,6 @@ setup_info setup_game(int sockfd){
 	}
 }
 
-
 int main(int argc, char** argv){
 	if(argc!=2){
 		printf("usage: %s [portnr]\n",argv[0]);
@@ -301,16 +300,12 @@ int main(int argc, char** argv){
 
 	auto s = setup_game(sockfd);
 
-	send_start(s.red_fd);
-	send_wait(s.blue_fd);
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
 	
-	puts("\nred map");
-	Map::send_red_map(1);
-
-	puts("\nblue map");
-	Map::send_blue_map(1);
+	send_start(s.red_fd);
+	Map::send_red_map(s.red_fd);
+	send_wait(s.blue_fd);
 
 	fd_set master;
 	FD_ZERO(&master);
@@ -328,7 +323,10 @@ int main(int argc, char** argv){
 					// the one whose turn it is
 					int bytes_read = sanitized_recv(i);
 					if(bytes_read==0) continue;
+
+					// TODO handle move command here
 					send_ok(i);
+
 					red_turn = !red_turn;
 					if(i==s.red_fd) Map::send_blue_map(s.blue_fd);
 					else Map::send_red_map(s.red_fd);
