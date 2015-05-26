@@ -56,8 +56,8 @@ void send_red_map(int fd){
 			int i = y*10+x;
 			if(map[i]=='.'){
 				*out++ = '.';
-			}else if(map[i]==' '){
-				*out++ = ' ';
+			}else if(map[i]=='~'){
+				*out++ = '~';
 			}else if((map[i]&0x80)==0x80){
 				*out++ = '?';
 			}else{
@@ -76,8 +76,8 @@ void send_blue_map(int fd){
 			int i = y*10+x;
 			if(map[i]=='.'){
 				*out++ = '.';
-			}else if(map[i]==' '){
-				*out++ = ' ';
+			}else if(map[i]=='~'){
+				*out++ = '~';
 			}else if((map[i]&0x80)==0x80){
 				*out++ = map[i]&0x7F;
 			}else{
@@ -91,14 +91,14 @@ void send_blue_map(int fd){
 
 char get_red_piece(size_t index){
 	assert(index<100);
-	if(0x80&map[index] || map[index]=='.' || map[index]=='~')
+	if( (0x80&map[index])==0x80 || map[index]=='.' || map[index]=='~')
 		 return 0;
 	else return map[index];
 }
 
 char get_blue_piece(size_t index){
 	assert(index<100);
-	if(!(0x80&map[index]) || map[index]=='.' || map[index]=='~')
+	if( (0x80&map[index])==0 || map[index]=='.' || map[index]=='~')
 		 return 0;
 	else return map[index]&0x7F;
 }

@@ -240,7 +240,7 @@ setup_info setup_game(int sockfd){
 						fd[current] = handle_new_connections(i);
 						// if successful
 						if(fd[current]!=0){
-							printf("first player connected (fd=[%d, %d])\n",fd[0],fd[1]);
+							printf("first player connected (fd=%d)\n",fd[current]);
 							// subscribe to it
 							FD_SET(fd[current], &master);
 						}
@@ -251,7 +251,7 @@ setup_info setup_game(int sockfd){
 						fd[current] = handle_new_connections(i);
 						// if successful
 						if(fd[current]!=0){
-							printf("second player connected (fd=[%d, %d])\n",fd[0],fd[1]);
+							printf("second player connected (fd=%d)\n",fd[current]);
 							// subscribe to it
 							FD_SET(fd[current], &master);
 							// stop listening for connections
@@ -290,8 +290,8 @@ setup_info setup_game(int sockfd){
 }
 
 bool is_in_lake(int source){
-	return source!=42 && source!=43 && source!=44 && source!=47
-		&& source!=52 && source!=52 && source!=54 && source!=57;
+	assert(source<100);
+	return Map::map[source] == '~';
 }
 
 bool parse_move(char* buf, int* source, int* dest){
@@ -302,12 +302,14 @@ bool parse_move(char* buf, int* source, int* dest){
 	 && dx>='A' && dx<='J' && dy>=1 && dy <=10){
 		sx-='A';
 		dx-='A';
-		sy-=1;
-		dy-=1;
+		sy=10-sy;
+		dy=10-dy;
 		*source = sy*10+sx;
 		*dest   = dy*10+dx;
 		return true;
-	}else return false;
+	}else{
+		return false;
+	}
 }
 
 int main(int argc, char** argv){
@@ -357,7 +359,15 @@ int main(int argc, char** argv){
 					buf[bytes_read] = '\0';
 
 					int source, dest;
-					if( parse_move(buf, &source, &dest)
+					bool parsing_valid = parse_move(buf, &source, &dest);
+
+					// if blue, mirror coordinates
+					if(i==s.blue_fd){
+						source = 99-source;
+						dest   = 99-dest;
+					}
+
+					if( parsing_valid
 					 && !is_in_lake(source) 
 					 && !is_in_lake(dest)){
 						// source and dest are both valid tiles
