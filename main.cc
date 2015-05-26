@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <netinet/tcp.h>
 
 inline void send_ok      (int fd) {write(fd,"OK\n",3);}
 inline void send_invalid (int fd) {write(fd,"INVALID\n",8);}
@@ -55,12 +56,18 @@ int create_and_bind_socket(char const * const port){
             continue;
         }
 
+
 		int yes=1;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
-                sizeof(int)) == -1) {
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
             perror("setsockopt");
             exit(1);
         }
+
+		// send packets immediatly, don't accumulate.
+		if(setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY, &yes, sizeof(int)) == -1) {
+			perror("failed to set TCP_NODELAY");
+			exit(1);
+		}
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(sockfd);
@@ -112,6 +119,27 @@ int sanitize(char *buf, int size){
 
 	return out;
 }
+char buf[110];
+
+void clear_read_buf(int fd){
+	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0);
+}
+
+int sanitized_recv(int fd){
+	int bytes_read = recv(fd, buf, sizeof(buf),0);
+	bytes_read = sanitize(buf,bytes_read);
+	if(bytes_read == 0){
+		send_invalid(fd);
+		return 0;
+	}
+	char c;
+	if(recv(fd,&c,sizeof(c),MSG_DONTWAIT)>0){
+		clear_read_buf(fd);
+		send_invalid(fd);
+		return 0;
+	}
+	return bytes_read;
+}
 
 char assign_color(char other_color, char *buf, size_t size){
 	if( size==3 && memcmp(buf,"RED",3)==0 ){
@@ -129,17 +157,12 @@ char assign_color(char other_color, char *buf, size_t size){
 	}
 }
 
-char buf[110];
 
 void handle_setup_messages(int fd, char* this_color, char* other_color, char* pieces){
 	if(*this_color==0){
 		// receive preferred color
-		int bytes_read = recv(fd, buf, sizeof(buf),0);
-		bytes_read = sanitize(buf,bytes_read);
-		if(bytes_read == 0){
-			send_invalid(fd);
-			return;
-		}
+		int bytes_read = sanitized_recv(fd);
+		if(bytes_read==0) return;
 
 		*this_color = assign_color(*other_color, buf, bytes_read);
 		if(*this_color=='B'){
@@ -153,9 +176,8 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		}
 	}else if(*pieces==0){
 		// validate pieces
-		int bytes_read = recv(fd, buf, sizeof(buf),0);	
-		bytes_read = sanitize(buf, bytes_read);
-		if(bytes_read==0){send_invalid(fd); return;}
+		int bytes_read = sanitized_recv(fd);
+		if(bytes_read==0) return;
 
 		if(validate_pieces(buf,bytes_read)){
 			memcpy(pieces,buf,40);
@@ -164,10 +186,9 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 		}else{
 			send_invalid(fd);
 		}
-	} else {
-		// ignore other input
-		recv(fd, buf, sizeof(buf),0);
 	}
+	// clear read buffer
+	clear_read_buf(fd);
 }
 
 int handle_new_connections(int sockfd){
@@ -203,7 +224,7 @@ setup_info setup_game(int sockfd){
 		int sel = select(maxfd+1, &tmp, NULL, NULL, NULL);
 		if(sel<=0){perror("select broke D:"); exit(-1);}
 
-		for(int i=0; i<=maxfd; i+=1){
+		for(int i=3; i<=maxfd; i+=1){
 			if( FD_ISSET(i, &tmp) ){
 				if(i==sockfd){
 					int current = fd[0]==0?0:1;
@@ -221,7 +242,6 @@ setup_info setup_game(int sockfd){
 					
 					// if 1 player is connected
 					else if(fd[0]==0 || fd[1]==0){
-						assert(fd[0]==0 || fd[1]==0);
 						fd[current] = handle_new_connections(i);
 						// if successful
 						if(fd[current]!=0){
@@ -263,6 +283,7 @@ setup_info setup_game(int sockfd){
 	}
 }
 
+
 int main(int argc, char** argv){
 	if(argc!=2){
 		printf("usage: %s [portnr]\n",argv[0]);
@@ -290,7 +311,7 @@ int main(int argc, char** argv){
 
 	puts("\nblue map");
 	Map::send_blue_map(1);
-
+	
 	return 0;
 }
 
