@@ -93,8 +93,8 @@ constexpr int max3(int const a, int const b, int const c){
 
 int sanitize(char *buf, int size){
 // Modifies the buffer, and returns the new size. This is always safe, since the 
-// sanitized text is always smaller than the original.
-// returns 0 if the buffer contains invalid character.
+// sanitized text is always smaller than or equal to the original.
+// returns 0 if the message was invalid.
 	int out = 0;
 	bool prev_space = true;
 
@@ -122,7 +122,7 @@ int sanitize(char *buf, int size){
 char buf[110];
 
 void clear_read_buf(int fd){
-	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0);
+	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0){};
 }
 
 int sanitized_recv(int fd){
@@ -311,6 +311,34 @@ int main(int argc, char** argv){
 
 	puts("\nblue map");
 	Map::send_blue_map(1);
+
+	fd_set master;
+	FD_ZERO(&master);
+	FD_SET(s.red_fd,&master);
+	FD_SET(s.blue_fd,&master);
+	bool red_turn = true;
+	while(true){
+		fd_set tmp = master;
+		int maxfd = s.red_fd>s.blue_fd?s.red_fd:s.blue_fd;
+		select(maxfd+1, &tmp, NULL, NULL, NULL);
+		for(int i=3; i<=maxfd; i+=1){
+			if(FD_ISSET(i,&tmp)){
+				if( ( red_turn && i==s.red_fd)
+				||  (!red_turn && i==s.blue_fd) ){
+					// the one whose turn it is
+					int bytes_read = sanitized_recv(i);
+					if(bytes_read==0) continue;
+					send_ok(i);
+					red_turn = !red_turn;
+					if(i==s.red_fd) Map::send_blue_map(s.blue_fd);
+					else Map::send_red_map(s.red_fd);
+				}else{
+					clear_read_buf(i);
+					send_wait(i);
+				}
+			}
+		}
+	}
 	
 	return 0;
 }
