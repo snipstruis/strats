@@ -4,7 +4,7 @@ strats - the stratego server.
 
 SYNOPSIS
 --------
-`strats *portnr*`
+`strats `*`portnr`*
 
 DESCRIPTION
 -----------
