@@ -312,6 +312,102 @@ bool parse_move(char* buf, int* source, int* dest){
 	}
 }
 
+void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
+	if( ( red_turn && current_fd==red_fd)
+			||  (!red_turn && current_fd==blue_fd) ){
+		// the one whose turn it is
+		int bytes_read = sanitized_recv(current_fd);
+		if(bytes_read==0){
+			send_invalid(current_fd);
+			return;
+		}
+
+		buf[bytes_read] = '\0';
+
+		int source, dest;
+		bool parsing_valid = parse_move(buf, &source, &dest);
+
+		// if blue, mirror coordinates
+		if(current_fd==blue_fd){
+			source = 99-source;
+			dest   = 99-dest;
+		}
+
+		if( parsing_valid
+				&& !is_in_lake(source) 
+				&& !is_in_lake(dest)){
+			// source and dest are both valid tiles
+
+			char source_piece;
+			if(current_fd==red_fd)
+				 source_piece = Map::get_red_piece(source);
+			else source_piece = Map::get_blue_piece(source);
+
+			if(source_piece==0 || source_piece=='F' || source_piece=='B'){
+				send_invalid(current_fd);
+				return;
+			}else{
+				// source is an ordinary, movable unit
+				int r = source-dest;
+				if((r==  1&&(source%10!=9)) 
+						|| (r== -1&&(source%10!=0)) 
+						|| (r== 10&&(dest<100)) 
+						|| (r==-10&&(dest>=0))){
+					if(Map::is_empty(dest)){
+						Map::map[dest]=Map::map[source];
+						Map::map[source]='.';
+						send_empty(red_fd);
+						send_empty(blue_fd);
+					}else{
+						char other = (current_fd==red_fd)?blue_fd:red_fd;
+
+						char dest_piece;
+						if(current_fd==red_fd)
+							 dest_piece = Map::get_blue_piece(dest);
+						else dest_piece = Map::get_red_piece(dest);
+
+						if(dest_piece == 0){
+							send_invalid(current_fd);
+							return;
+						}else if(dest_piece == 'F'){
+							send_win(current_fd);
+							send_lose(other);
+							exit(0);
+						}else{
+							char victor = resolve_battle(source_piece,dest_piece);
+							if(victor==source_piece){
+								Map::map[dest] = Map::map[source];
+								Map::map[source] = '.';
+							}else if(victor==dest_piece){
+								Map::map[source] = '.';
+							}else{
+								Map::map[source] = '.';
+								Map::map[dest]   = '.';
+							}
+							send_attack(current_fd,    source_piece,dest_piece,victor);
+							send_attack(other,source_piece,dest_piece,victor);
+						}
+					}
+				}else{
+					send_invalid(current_fd);
+					return;
+				}
+			}
+
+			// send map to other player
+			if(current_fd==red_fd) Map::send_blue_map(blue_fd);
+			else Map::send_red_map(red_fd);
+
+			red_turn = !red_turn;
+		}else{
+			send_invalid(current_fd);
+		}
+	}else{
+		clear_read_buf(current_fd);
+		send_wait(current_fd);
+	}
+}	
+
 int main(int argc, char** argv){
 	if(argc!=2){
 		printf("usage: %s [portnr]\n",argv[0]);
@@ -347,99 +443,7 @@ int main(int argc, char** argv){
 		select(maxfd+1, &tmp, NULL, NULL, NULL);
 		for(int i=3; i<=maxfd; i+=1){
 			if(FD_ISSET(i,&tmp)){
-				if( ( red_turn && i==s.red_fd)
-						||  (!red_turn && i==s.blue_fd) ){
-					// the one whose turn it is
-					int bytes_read = sanitized_recv(i);
-					if(bytes_read==0){
-						send_invalid(i);
-						continue;
-					}
-
-					buf[bytes_read] = '\0';
-
-					int source, dest;
-					bool parsing_valid = parse_move(buf, &source, &dest);
-
-					// if blue, mirror coordinates
-					if(i==s.blue_fd){
-						source = 99-source;
-						dest   = 99-dest;
-					}
-
-					if( parsing_valid
-							&& !is_in_lake(source) 
-							&& !is_in_lake(dest)){
-						// source and dest are both valid tiles
-
-						char source_piece;
-						if(i==s.red_fd)
-							 source_piece = Map::get_red_piece(source);
-						else source_piece = Map::get_blue_piece(source);
-
-						if(source_piece==0 || source_piece=='F' || source_piece=='B'){
-							send_invalid(i);
-							continue;
-						}else{
-							// source is an ordinary, movable unit
-							int r = source-dest;
-							if((r==  1&&(source%10!=9)) 
-									|| (r== -1&&(source%10!=0)) 
-									|| (r== 10&&(dest<100)) 
-									|| (r==-10&&(dest>=0))){
-								if(Map::is_empty(dest)){
-									Map::map[dest]=Map::map[source];
-									Map::map[source]='.';
-									send_empty(s.red_fd);
-									send_empty(s.blue_fd);
-								}else{
-									char other = (i==s.red_fd)?s.blue_fd:s.red_fd;
-
-									char dest_piece;
-									if(i==s.red_fd)
-										 dest_piece = Map::get_blue_piece(dest);
-									else dest_piece = Map::get_red_piece(dest);
-
-									if(dest_piece == 0){
-										send_invalid(i);
-										continue;
-									}else if(dest_piece == 'F'){
-										send_win(i);
-										send_lose(other);
-										exit(0);
-									}else{
-										char victor = resolve_battle(source_piece,dest_piece);
-										if(victor==source_piece){
-											Map::map[dest] = Map::map[source];
-											Map::map[source] = '.';
-										}else if(victor==dest_piece){
-											Map::map[source] = '.';
-										}else{
-											Map::map[source] = '.';
-											Map::map[dest]   = '.';
-										}
-										send_attack(i,    source_piece,dest_piece,victor);
-										send_attack(other,source_piece,dest_piece,victor);
-									}
-								}
-							}else{
-								send_invalid(i);
-								continue;
-							}
-						}
-
-						// send map to other player
-						if(i==s.red_fd) Map::send_blue_map(s.blue_fd);
-						else Map::send_red_map(s.red_fd);
-
-						red_turn = !red_turn;
-					}else{
-						send_invalid(i);
-					}
-				}else{
-					clear_read_buf(i);
-					send_wait(i);
-				}
+				handle_turn(i,s.red_fd,s.blue_fd,red_turn);
 			}
 		}
 	}
