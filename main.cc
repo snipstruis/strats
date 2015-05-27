@@ -380,7 +380,6 @@ int main(int argc, char** argv){
 						if(source_piece==0 || source_piece=='F' || source_piece=='B'){
 							send_invalid(i);
 							continue;
-						}else if(source_piece=='2'){ // TODO: special scout rules
 						}else{
 							// source is an ordinary, movable unit
 							int r = source-dest;
