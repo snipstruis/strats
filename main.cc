@@ -33,43 +33,43 @@ inline void send_attack  (int fd, char a, char d, char v){
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa){
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int create_and_bind_socket(char const * const port){
 	int sockfd;
 
 	struct addrinfo hints;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE; // use this IP
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE; // use this IP
 
 	int rv;
 	struct addrinfo *servinfo;
-    if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return -1;
-    }
+	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return -1;
+	}
 
 	struct addrinfo *p;
-    // loop through all the results and bind to the first we can
-    for(p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,
-                p->ai_protocol)) == -1) {
-            perror("server: socket");
-            continue;
-        }
+	// loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+						p->ai_protocol)) == -1) {
+			perror("server: socket");
+			continue;
+		}
 
 
 		int yes=1;
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-            perror("setsockopt");
-            exit(1);
-        }
+		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+			perror("setsockopt");
+			exit(1);
+		}
 
 		// send packets immediatly, don't accumulate.
 		if(setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY, &yes, sizeof(int)) == -1) {
@@ -77,21 +77,21 @@ int create_and_bind_socket(char const * const port){
 			exit(1);
 		}
 
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
-            perror("server: bind");
-            continue;
-        }
+		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sockfd);
+			perror("server: bind");
+			continue;
+		}
 
-        break;
-    }
+		break;
+	}
 
-    if (p == NULL)  {
-        fprintf(stderr, "server: failed to bind\n");
-        return -2;
-    }
+	if (p == NULL)  {
+		fprintf(stderr, "server: failed to bind\n");
+		return -2;
+	}
 
-    freeaddrinfo(servinfo);
+	freeaddrinfo(servinfo);
 	return sockfd;
 }
 
@@ -100,9 +100,9 @@ constexpr int max3(int const a, int const b, int const c){
 }
 
 int sanitize(char *buf, int size){
-// Modifies the buffer, and returns the new size. This is always safe, since the 
-// sanitized text is always smaller than or equal to the original.
-// returns 0 if the message was invalid.
+	// Modifies the buffer, and returns the new size. This is always safe, since the 
+	// sanitized text is always smaller than or equal to the original.
+	// returns 0 if the message was invalid.
 	int out = 0;
 	bool prev_space = true;
 
@@ -245,7 +245,7 @@ setup_info setup_game(int sockfd){
 							FD_SET(fd[current], &master);
 						}
 					}
-					
+
 					// if 1 player is connected
 					else if(fd[0]==0 || fd[1]==0){
 						fd[current] = handle_new_connections(i);
@@ -269,13 +269,13 @@ setup_info setup_game(int sockfd){
 
 					// if all data is now present
 					if(fd[0]!=0        && fd[1]!=0
-					&& color[0]!=0     && color[1]!=0
-					&& pieces[0][0]!=0 && pieces[1][0]!=0){
+							&& color[0]!=0     && color[1]!=0
+							&& pieces[0][0]!=0 && pieces[1][0]!=0){
 						// return it in a more convenient format
 						int blue,red;
 						if(color[0]=='R'){ red=0; blue=1; }
 						else { red=1; blue=0;}
-						
+
 						setup_info s;
 						s.red_fd  = fd[red];
 						s.blue_fd = fd[blue];
@@ -298,8 +298,8 @@ bool parse_move(char* buf, int* source, int* dest){
 	char sx,dx;
 	int  sy,dy;
 	if( sscanf(buf,"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
-	 && sx>='A' && sx<='J' && sy>=1 && sy <=10
-	 && dx>='A' && dx<='J' && dy>=1 && dy <=10){
+			&& sx>='A' && sx<='J' && sy>=1 && sy <=10
+			&& dx>='A' && dx<='J' && dy>=1 && dy <=10){
 		sx-='A';
 		dx-='A';
 		sy=10-sy;
@@ -320,18 +320,18 @@ int main(int argc, char** argv){
 
 	int sockfd = create_and_bind_socket(argv[1]);
 
-    if (listen(sockfd, 3) == -1) {
-        perror("listen");
-        exit(1);
-    }
+	if (listen(sockfd, 3) == -1) {
+		perror("listen");
+		exit(1);
+	}
 
-    printf("server: waiting for connections...\n");
+	printf("server: waiting for connections...\n");
 
 	auto s = setup_game(sockfd);
 
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
-	
+
 	send_start(s.red_fd);
 	Map::send_red_map(s.red_fd);
 	send_wait(s.blue_fd);
@@ -348,7 +348,7 @@ int main(int argc, char** argv){
 		for(int i=3; i<=maxfd; i+=1){
 			if(FD_ISSET(i,&tmp)){
 				if( ( red_turn && i==s.red_fd)
-				||  (!red_turn && i==s.blue_fd) ){
+						||  (!red_turn && i==s.blue_fd) ){
 					// the one whose turn it is
 					int bytes_read = sanitized_recv(i);
 					if(bytes_read==0){
@@ -368,15 +368,15 @@ int main(int argc, char** argv){
 					}
 
 					if( parsing_valid
-					 && !is_in_lake(source) 
-					 && !is_in_lake(dest)){
+							&& !is_in_lake(source) 
+							&& !is_in_lake(dest)){
 						// source and dest are both valid tiles
 
 						char source_piece;
 						if(i==s.red_fd)
 							 source_piece = Map::get_red_piece(source);
 						else source_piece = Map::get_blue_piece(source);
-						
+
 						if(source_piece==0 || source_piece=='F' || source_piece=='B'){
 							send_invalid(i);
 							continue;
@@ -384,9 +384,9 @@ int main(int argc, char** argv){
 							// source is an ordinary, movable unit
 							int r = source-dest;
 							if((r==  1&&(source%10!=9)) 
-							|| (r== -1&&(source%10!=0)) 
-							|| (r== 10&&(dest<100)) 
-							|| (r==-10&&(dest>=0))){
+									|| (r== -1&&(source%10!=0)) 
+									|| (r== 10&&(dest<100)) 
+									|| (r==-10&&(dest>=0))){
 								if(Map::is_empty(dest)){
 									Map::map[dest]=Map::map[source];
 									Map::map[source]='.';
@@ -446,3 +446,4 @@ int main(int argc, char** argv){
 	return 0;
 }
 
+// vim: set sw=4 ts=4
