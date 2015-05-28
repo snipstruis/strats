@@ -53,7 +53,7 @@ char resolve_battle(char attacker,char defender){
 		return attacker;
 
 	}else if(attacker==defender) return '0';
-	else return attacker>defender;
+	else return attacker>defender?attacker:defender;
 }
 
 namespace Map{

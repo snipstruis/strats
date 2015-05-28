@@ -347,6 +347,8 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 				Map::map[source] = '.';
 				Map::map[dest]   = '.';
 			}
+			send_attack(1,source_piece,dest_piece,victor);
+			puts("");
 			send_attack(current_fd,    source_piece,dest_piece,victor);
 			send_attack(other,source_piece,dest_piece,victor);
 		}
