@@ -312,6 +312,48 @@ bool parse_move(char* buf, int* source, int* dest){
 	}
 }
 
+void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
+	if(Map::is_empty(dest)){
+		Map::map[dest]=Map::map[source];
+		Map::map[source]='.';
+		send_empty(red_fd);
+		send_empty(blue_fd);
+	}else{
+		char other = (current_fd==red_fd)?blue_fd:red_fd;
+
+		char source_piece, dest_piece;
+		if(current_fd==red_fd){
+			dest_piece   = Map::get_blue_piece(dest);
+			source_piece = Map::get_red_piece(source);
+		}else{
+		   	dest_piece   = Map::get_red_piece(dest);
+			source_piece = Map::get_blue_piece(source);
+		}
+
+		if(dest_piece == 0){
+			send_invalid(current_fd);
+			return;
+		}else if(dest_piece == 'F'){
+			send_win(current_fd);
+			send_lose(other);
+			exit(0);
+		}else{
+			char victor = resolve_battle(source_piece,dest_piece);
+			if(victor==source_piece){
+				Map::map[dest] = Map::map[source];
+				Map::map[source] = '.';
+			}else if(victor==dest_piece){
+				Map::map[source] = '.';
+			}else{
+				Map::map[source] = '.';
+				Map::map[dest]   = '.';
+			}
+			send_attack(current_fd,    source_piece,dest_piece,victor);
+			send_attack(other,source_piece,dest_piece,victor);
+		}
+	}
+}
+
 void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 	if( ( red_turn && current_fd==red_fd)
 			||  (!red_turn && current_fd==blue_fd) ){
@@ -353,41 +395,7 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 						|| (r== -1&&(source%10!=0)) 
 						|| (r== 10&&(dest<100)) 
 						|| (r==-10&&(dest>=0))){
-					if(Map::is_empty(dest)){
-						Map::map[dest]=Map::map[source];
-						Map::map[source]='.';
-						send_empty(red_fd);
-						send_empty(blue_fd);
-					}else{
-						char other = (current_fd==red_fd)?blue_fd:red_fd;
-
-						char dest_piece;
-						if(current_fd==red_fd)
-							 dest_piece = Map::get_blue_piece(dest);
-						else dest_piece = Map::get_red_piece(dest);
-
-						if(dest_piece == 0){
-							send_invalid(current_fd);
-							return;
-						}else if(dest_piece == 'F'){
-							send_win(current_fd);
-							send_lose(other);
-							exit(0);
-						}else{
-							char victor = resolve_battle(source_piece,dest_piece);
-							if(victor==source_piece){
-								Map::map[dest] = Map::map[source];
-								Map::map[source] = '.';
-							}else if(victor==dest_piece){
-								Map::map[source] = '.';
-							}else{
-								Map::map[source] = '.';
-								Map::map[dest]   = '.';
-							}
-							send_attack(current_fd,    source_piece,dest_piece,victor);
-							send_attack(other,source_piece,dest_piece,victor);
-						}
-					}
+					handle_move(source,dest,current_fd,red_fd,blue_fd);
 				}else{
 					send_invalid(current_fd);
 					return;
