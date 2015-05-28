@@ -58,8 +58,7 @@ int create_and_bind_socket(char const * const port){
 	struct addrinfo *p;
 	// loop through all the results and bind to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-						p->ai_protocol)) == -1) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
 			perror("server: socket");
 			continue;
 		}
@@ -269,8 +268,8 @@ setup_info setup_game(int sockfd){
 
 					// if all data is now present
 					if(fd[0]!=0        && fd[1]!=0
-							&& color[0]!=0     && color[1]!=0
-							&& pieces[0][0]!=0 && pieces[1][0]!=0){
+					&& color[0]!=0     && color[1]!=0
+					&& pieces[0][0]!=0 && pieces[1][0]!=0){
 						// return it in a more convenient format
 						int blue,red;
 						if(color[0]=='R'){ red=0; blue=1; }
@@ -297,9 +296,9 @@ bool is_in_lake(int source){
 bool parse_move(char* buf, int* source, int* dest){
 	char sx,dx;
 	int  sy,dy;
-	if( sscanf(buf,"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
-			&& sx>='A' && sx<='J' && sy>=1 && sy <=10
-			&& dx>='A' && dx<='J' && dy>=1 && dy <=10){
+	if(sscanf(buf,"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
+	&& sx>='A' && sx<='J' && sy>=1 && sy <=10
+	&& dx>='A' && dx<='J' && dy>=1 && dy <=10){
 		sx-='A';
 		dx-='A';
 		sy=10-sy;
@@ -356,7 +355,7 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 
 void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 	if( ( red_turn && current_fd==red_fd)
-			||  (!red_turn && current_fd==blue_fd) ){
+	||  (!red_turn && current_fd==blue_fd) ){
 		// the one whose turn it is
 		int bytes_read = sanitized_recv(current_fd);
 		if(bytes_read==0){
@@ -392,9 +391,9 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 				// source is an ordinary, movable unit
 				int r = source-dest;
 				if((r==  1&&(source%10!=9)) 
-						|| (r== -1&&(source%10!=0)) 
-						|| (r== 10&&(dest<100)) 
-						|| (r==-10&&(dest>=0))){
+				|| (r== -1&&(source%10!=0)) 
+				|| (r== 10&&(dest<100)) 
+				|| (r==-10&&(dest>=0))){
 					handle_move(source,dest,current_fd,red_fd,blue_fd);
 				}else{
 					send_invalid(current_fd);
