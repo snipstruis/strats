@@ -38,8 +38,6 @@ char resolve_battle(char attacker,char defender){
 	assert(attacker=='M' || (attacker>='1'&&attacker<='9'));
 	assert(defender=='M' || defender=='F' || defender=='B' || (defender>='1'&&defender<='9'));
 
-	if(defender=='F') return attacker;
-
 	if(defender=='B'){
 		if(attacker=='3')
 			 return attacker; 
