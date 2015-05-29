@@ -16,16 +16,17 @@
 #include <signal.h>
 #include <netinet/tcp.h>
 
-inline void send_ok      (int fd) {write(fd,"OK\n",3);}
-inline void send_invalid (int fd) {write(fd,"INVALID\n",8);}
-inline void send_red     (int fd) {write(fd,"RED\n",4);}
-inline void send_blue    (int fd) {write(fd,"BLUE\n",5);}
-inline void send_start   (int fd) {write(fd,"START\n",6);}
-inline void send_wait    (int fd) {write(fd,"WAIT\n",5);}
-inline void send_win     (int fd) {write(fd,"WIN\n",4);}
-inline void send_lose    (int fd) {write(fd,"LOSE\n",5);}
-inline void send_empty   (int fd) {write(fd,"EMPTY\n",6);}
+inline void send_ok      (int fd) {printf("%d< OK\n",fd);      write(fd,"OK\n",3);}
+inline void send_invalid (int fd) {printf("%d< INVALID\n",fd); write(fd,"INVALID\n",8);}
+inline void send_red     (int fd) {printf("%d< RED\n",fd);     write(fd,"RED\n",4);}
+inline void send_blue    (int fd) {printf("%d< BLUE\n",fd);    write(fd,"BLUE\n",5);}
+inline void send_start   (int fd) {printf("%d< START\n",fd);   write(fd,"START\n",6);}
+inline void send_wait    (int fd) {printf("%d< WAIT\n",fd);    write(fd,"WAIT\n",5);}
+inline void send_win     (int fd) {printf("%d< WIN\n",fd);     write(fd,"WIN\n",4);}
+inline void send_lose    (int fd) {printf("%d< LOSE\n",fd);    write(fd,"LOSE\n",5);}
+inline void send_empty   (int fd) {printf("%d< EMPTY\n",fd);   write(fd,"EMPTY\n",6);}
 inline void send_attack  (int fd, char a, char d, char v){
+	printf("%d< ATTACK %c %c %c\n",fd,a,d,v);
 	static char b[14];
 	sprintf(b,"ATTACK %c %c %c\n",a,d,v);
 	write(fd,b,13);
@@ -134,6 +135,7 @@ void clear_read_buf(int fd){
 
 int sanitized_recv(int fd){
 	int bytes_read = recv(fd, buf, sizeof(buf),0);
+	printf("%d> %.*s\n",fd,bytes_read,buf);
 	bytes_read = sanitize(buf,bytes_read);
 	if(bytes_read == 0){
 		send_invalid(fd);
@@ -171,10 +173,8 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 
 		*this_color = assign_color(*other_color, buf, bytes_read);
 		if(*this_color=='B'){
-			printf("assigned BLUE to %d\n",fd);
 			send_blue(fd);
 		}else if(*this_color=='R'){
-			printf("assigned RED to %d\n",fd);
 			send_red(fd);
 		}else{
 			send_invalid(fd);
@@ -186,7 +186,6 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 
 		if(validate_pieces(buf,bytes_read)){
 			memcpy(pieces,buf,40);
-			printf("received valid piece setup from %d\n",fd);
 			send_ok(fd);
 		}else{
 			send_invalid(fd);
@@ -433,7 +432,6 @@ int main(int argc, char** argv){
 	printf("server: waiting for connections...\n");
 
 	auto s = setup_game(sockfd);
-
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
 
