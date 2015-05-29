@@ -104,6 +104,7 @@ namespace Map{
 				}
 			}
 			*out++ = '\n';
+			printf("%d< %.*s",fd,11,out-11);
 		}
 		write(fd,buf,110);
 	}
