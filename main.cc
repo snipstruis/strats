@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <string>
 
 #include "stratego.h"
 
@@ -107,14 +108,14 @@ int sanitize(char *buf, int size){
 	bool prev_space = true;
 
 	for(int i=0; i<size; i+=1){
-		if(buf[i] <= ' '){
+		if(buf[i] <= ' ' && buf[i]!='\n'){
 			if(prev_space){
 				continue;
 			}else{
 				prev_space = true;
 				buf[out++] = buf[i];
 			}
-		}else if( (buf[i]>='A' && buf[i]<='Z') || (buf[i]>='0' && buf[i]<='9') ){
+		}else if( (buf[i]>='A' && buf[i]<='Z') || (buf[i]>='0' && buf[i]<='9') || buf[i]=='\n' ){
 			prev_space = false;
 			buf[out++] = buf[i];
 		}else{
@@ -127,7 +128,7 @@ int sanitize(char *buf, int size){
 
 	return out;
 }
-char buf[110];
+char buf[256];
 
 void clear_read_buf(int fd){
 	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0){};
@@ -135,8 +136,9 @@ void clear_read_buf(int fd){
 
 int sanitized_recv(int fd){
 	int bytes_read = recv(fd, buf, sizeof(buf),0);
-	printf("%d> %.*s\n",fd,bytes_read,buf);
 	bytes_read = sanitize(buf,bytes_read);
+
+	printf("%d> %.*s\n",fd,bytes_read,buf);
 	if(bytes_read == 0){
 		send_invalid(fd);
 		return 0;
@@ -149,12 +151,32 @@ int sanitized_recv(int fd){
 	return bytes_read;
 }
 
-char assign_color(char other_color, char *buf, size_t size){
-	if( size==3 && memcmp(buf,"RED",3)==0 ){
+std::string sanitized_recvline(int fd){
+	assert(fd>0);
+	std::string s="";
+	char prev;
+	char c = '\n';
+	int  r;
+	while(true){
+		prev = c;
+		r = read(fd,&c,1);
+		if(r!=1) break;
+		else if(c=='\n') {if(prev<=' '){s.pop_back();} break;}
+	 	else if(c<=' ' && prev<=' ') continue;
+		else if( (c>='A'&&c<='Z') || (c>='0'&&c<='9') ) s += c;
+		else if( c<=' ' ) s += ' ';
+		else continue;
+	};
+	printf("%d> %s\n", fd, s.c_str());
+	return s;
+}
+
+char assign_color(char other_color, std::string const & str){
+	if( str=="RED" ){
 		if(other_color!='R')
 			 return 'R';
 		else return 'B';		
-	}else if( size==4 && memcmp(buf,"BLUE",4)==0 ){
+	}else if( str=="BLUE" ){
 		if(other_color!='B')
 			 return 'B';
 		else return 'R';
@@ -163,14 +185,12 @@ char assign_color(char other_color, char *buf, size_t size){
 	}
 }
 
+void handle_setup_messages(int const fd, 
+		char * const this_color, char * const other_color, char * const pieces){
+	std::string input = sanitized_recvline(fd);
 
-void handle_setup_messages(int fd, char* this_color, char* other_color, char* pieces){
 	if(*this_color==0){
-		// receive preferred color
-		int bytes_read = sanitized_recv(fd);
-		if(bytes_read==0) return;
-
-		*this_color = assign_color(*other_color, buf, bytes_read);
+		*this_color = assign_color(*other_color, input);
 		if(*this_color=='B'){
 			send_blue(fd);
 		}else if(*this_color=='R'){
@@ -179,14 +199,10 @@ void handle_setup_messages(int fd, char* this_color, char* other_color, char* pi
 			send_invalid(fd);
 		}
 	}else if(*pieces==0){
-		// validate pieces
-		int bytes_read = sanitized_recv(fd);
-		if(bytes_read==0) return;
-
-		if(validate_pieces(buf,bytes_read)){
-			memcpy(pieces,buf,40);
+		if(validate_pieces(input,pieces)){
 			send_ok(fd);
 		}else{
+			memset(pieces,0,40);
 			send_invalid(fd);
 		}
 	}
