@@ -65,7 +65,6 @@ int create_and_bind_socket(char const * const port){
 			continue;
 		}
 
-
 		int yes=1;
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 			perror("setsockopt");
@@ -99,7 +98,7 @@ int create_and_bind_socket(char const * const port){
 constexpr int max3(int const a, int const b, int const c){
 	return a>b?(a>c?a:c):(b>c?b:c);
 }
-
+/*
 int sanitize(char *buf, int size){
 	// Modifies the buffer, and returns the new size. This is always safe, since the 
 	// sanitized text is always smaller than or equal to the original.
@@ -128,12 +127,13 @@ int sanitize(char *buf, int size){
 
 	return out;
 }
+*/
 char buf[256];
 
 void clear_read_buf(int fd){
 	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0){};
 }
-
+/*
 int sanitized_recv(int fd){
 	int bytes_read = recv(fd, buf, sizeof(buf),0);
 	bytes_read = sanitize(buf,bytes_read);
@@ -150,7 +150,7 @@ int sanitized_recv(int fd){
 	}
 	return bytes_read;
 }
-
+*/
 std::string sanitized_recvline(int fd){
 	assert(fd>0);
 	std::string s="";
@@ -307,10 +307,10 @@ bool is_in_lake(int source){
 	return Map::map[source] == '~';
 }
 
-bool parse_move(char* buf, int* source, int* dest){
+bool parse_move(std::string input,int* source, int* dest){
 	char sx,dx;
 	int  sy,dy;
-	if(sscanf(buf,"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
+	if(sscanf(&input[0],"MOVE %c%d %c%d",&sx,&sy,&dx,&dy)==4
 	&& sx>='A' && sx<='J' && sy>=1 && sy <=10
 	&& dx>='A' && dx<='J' && dy>=1 && dy <=10){
 		sx-='A';
@@ -373,16 +373,10 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 	if( ( red_turn && current_fd==red_fd)
 	||  (!red_turn && current_fd==blue_fd) ){
 		// the one whose turn it is
-		int bytes_read = sanitized_recv(current_fd);
-		if(bytes_read==0){
-			send_invalid(current_fd);
-			return;
-		}
-
-		buf[bytes_read] = '\0';
+		std::string input = sanitized_recvline(current_fd);
 
 		int source, dest;
-		bool parsing_valid = parse_move(buf, &source, &dest);
+		bool parsing_valid = parse_move(input, &source, &dest);
 
 		// if blue, mirror coordinates
 		if(current_fd==blue_fd){
@@ -390,9 +384,7 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 			dest   = 99-dest;
 		}
 
-		if( parsing_valid
-				&& !is_in_lake(source) 
-				&& !is_in_lake(dest)){
+		if( parsing_valid && !is_in_lake(source) && !is_in_lake(dest)){
 			// source and dest are both valid tiles
 
 			char source_piece;
