@@ -5,17 +5,9 @@
 #include <cstring>
 #include <string>
 
+#include "netcode.h"
 #include "stratego.h"
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <netinet/tcp.h>
 
 inline void send_ok      (int fd) {printf("%d< OK\n",fd);      write(fd,"OK\n",3);}
 inline void send_invalid (int fd) {printf("%d< INVALID\n",fd); write(fd,"INVALID\n",8);}
@@ -33,142 +25,8 @@ inline void send_attack  (int fd, char a, char d, char v){
 	write(fd,b,13);
 }
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa){
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-int create_and_bind_socket(char const * const port){
-	int sockfd;
-
-	struct addrinfo hints;
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // use this IP
-
-	int rv;
-	struct addrinfo *servinfo;
-	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return -1;
-	}
-
-	struct addrinfo *p;
-	// loop through all the results and bind to the first we can
-	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-			perror("server: socket");
-			continue;
-		}
-
-		int yes=1;
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-			perror("setsockopt");
-			exit(1);
-		}
-
-		// send packets immediatly, don't accumulate.
-		if(setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY, &yes, sizeof(int)) == -1) {
-			perror("failed to set TCP_NODELAY");
-			exit(1);
-		}
-
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
-			perror("server: bind");
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL)  {
-		fprintf(stderr, "server: failed to bind\n");
-		return -2;
-	}
-
-	freeaddrinfo(servinfo);
-	return sockfd;
-}
-
 constexpr int max3(int const a, int const b, int const c){
 	return a>b?(a>c?a:c):(b>c?b:c);
-}
-/*
-int sanitize(char *buf, int size){
-	// Modifies the buffer, and returns the new size. This is always safe, since the 
-	// sanitized text is always smaller than or equal to the original.
-	// returns 0 if the message was invalid.
-	int out = 0;
-	bool prev_space = true;
-
-	for(int i=0; i<size; i+=1){
-		if(buf[i] <= ' ' && buf[i]!='\n'){
-			if(prev_space){
-				continue;
-			}else{
-				prev_space = true;
-				buf[out++] = buf[i];
-			}
-		}else if( (buf[i]>='A' && buf[i]<='Z') || (buf[i]>='0' && buf[i]<='9') || buf[i]=='\n' ){
-			prev_space = false;
-			buf[out++] = buf[i];
-		}else{
-			return 0;
-		}
-	}
-
-	// remove trailing space if any
-	if(buf[out-1]<=' ') out-=1;
-
-	return out;
-}
-*/
-char buf[256];
-
-void clear_read_buf(int fd){
-	while(recv(fd,buf,sizeof(buf),MSG_DONTWAIT)>0){};
-}
-/*
-int sanitized_recv(int fd){
-	int bytes_read = recv(fd, buf, sizeof(buf),0);
-	bytes_read = sanitize(buf,bytes_read);
-
-	printf("%d> %.*s\n",fd,bytes_read,buf);
-	if(bytes_read == 0){
-		send_invalid(fd);
-		return 0;
-	}
-	char c[8];
-	if(recv(fd,&c,sizeof(c),MSG_DONTWAIT)>0){
-		clear_read_buf(fd);
-		return 0;
-	}
-	return bytes_read;
-}
-*/
-std::string sanitized_recvline(int fd){
-	assert(fd>0);
-	std::string s="";
-	char prev;
-	char c = '\n';
-	int  r;
-	while(true){
-		prev = c;
-		r = read(fd,&c,1);
-		if(r!=1) break;
-		else if(c=='\n') {if(prev<=' '){s.pop_back();} break;}
-	 	else if(c<=' ' && prev<=' ') continue;
-		else if( (c>='A'&&c<='Z') || (c>='0'&&c<='9') ) s += c;
-		else if( c<=' ' ) s += ' ';
-		else continue;
-	};
-	printf("%d> %s\n", fd, s.c_str());
-	return s;
 }
 
 char assign_color(char other_color, std::string const & str){
@@ -208,17 +66,6 @@ void handle_setup_messages(int const fd,
 	}
 	// clear read buffer
 	clear_read_buf(fd);
-}
-
-int handle_new_connections(int sockfd){
-	struct sockaddr_storage their_addr; // connector's address information
-	socklen_t sin_size = sizeof their_addr;
-	int fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
-	if(fd == -1) {
-		return 0;
-	}else{
-		return fd;
-	}
 }
 
 struct setup_info{
