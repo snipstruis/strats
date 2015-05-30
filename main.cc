@@ -149,10 +149,6 @@ setup_info setup_game(int sockfd){
 	}
 }
 
-bool is_in_lake(int source){
-	assert(source<100);
-	return Map::map[source] == '~';
-}
 
 bool parse_move(std::string input,int* source, int* dest){
 	char sx,dx;
@@ -229,7 +225,7 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 			dest   = 99-dest;
 		}
 
-		if( parsing_valid && !is_in_lake(source) && !is_in_lake(dest)){
+		if( parsing_valid && !Map::is_in_lake(source) && !Map::is_in_lake(dest)){
 			// source and dest are both valid tiles
 
 			char source_piece;

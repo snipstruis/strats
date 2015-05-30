@@ -125,6 +125,11 @@ namespace Map{
 		else return map[index]&0x7F;
 	}
 
+	bool is_in_lake(int source){
+		assert(source<100);
+		return Map::map[source] == '~';
+	}
+
 	bool is_empty(int index){
 		assert(index<100);
 		return map[index]=='.';
