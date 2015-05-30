@@ -141,10 +141,9 @@ int sanitized_recv(int fd){
 		send_invalid(fd);
 		return 0;
 	}
-	char c;
+	char c[8];
 	if(recv(fd,&c,sizeof(c),MSG_DONTWAIT)>0){
 		clear_read_buf(fd);
-		send_invalid(fd);
 		return 0;
 	}
 	return bytes_read;
