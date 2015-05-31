@@ -239,8 +239,8 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 			}else{
 				// source is an ordinary, movable unit
 				int r = source-dest;
-				if((r==  1&&(source%10!=9)) 
-				|| (r== -1&&(source%10!=0)) 
+				if((r==  1&&(dest%10!=9)) 
+				|| (r== -1&&(dest%10!=0)) 
 				|| (r== 10&&(dest<100)) 
 				|| (r==-10&&(dest>=0))){
 					handle_move(source,dest,current_fd,red_fd,blue_fd);
