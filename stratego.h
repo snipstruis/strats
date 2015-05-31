@@ -79,7 +79,7 @@ namespace Map{
 				}else if(map[i]=='~'){
 					*out++ = '~';
 				}else if((map[i]&0x80)==0x80){
-					*out++ = '?';
+					*out++ = '#';
 				}else{
 					*out++ = map[i]&0x7F;
 				}
@@ -102,7 +102,7 @@ namespace Map{
 				}else if((map[i]&0x80)==0x80){
 					*out++ = map[i]&0x7F;
 				}else{
-					*out++ = '?';
+					*out++ = '#';
 				}
 			}
 			*out++ = '\n';
