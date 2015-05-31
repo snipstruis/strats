@@ -100,7 +100,7 @@ setup_info setup_game(int sockfd){
 						fd[current] = handle_new_connections(i);
 						// if successful
 						if(fd[current]!=0){
-							printf("first player connected (fd=%d)\n",fd[current]);
+							printf("-- first player connected (fd=%d)\n",fd[current]);
 							// subscribe to it
 							FD_SET(fd[current], &master);
 						}
@@ -111,7 +111,7 @@ setup_info setup_game(int sockfd){
 						fd[current] = handle_new_connections(i);
 						// if successful
 						if(fd[current]!=0){
-							printf("second player connected (fd=%d)\n",fd[current]);
+							printf("-- second player connected (fd=%d)\n",fd[current]);
 							// subscribe to it
 							FD_SET(fd[current], &master);
 							// stop listening for connections
@@ -211,6 +211,7 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 }
 
 void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
+	static size_t turnnr=1;
 	if( ( red_turn && current_fd==red_fd)
 	||  (!red_turn && current_fd==blue_fd) ){
 		// the one whose turn it is
@@ -255,6 +256,8 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 			else Map::send_red_map(red_fd);
 
 			red_turn = !red_turn;
+
+			printf("-- turn %zu\n",turnnr++);
 		}else{
 			send_invalid(current_fd);
 		}
