@@ -202,7 +202,6 @@ std::string handle_move(std::string input, bool red_turn){
 		}else return "INVALID MOVE";
 
 		for(int i=source+update; i!=dest; i+=update){
-			printf("-- i:%d source:%d dest:%d update:%d\n",i,source,dest,update);
 			if(!Map::is_empty(i)) return "INVALID MOVE";
 		}
 	}else{
