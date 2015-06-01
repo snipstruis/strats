@@ -275,13 +275,14 @@ void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
 				}
 			}
 
+			printf("-- turn %zu\n",turnnr++);
+
 			// send map to other player
 			if(current_fd==red_fd) Map::send_blue_map(blue_fd);
 			else Map::send_red_map(red_fd);
 
 			red_turn = !red_turn;
 
-			printf("-- turn %zu\n",turnnr++);
 		}else{
 			send_invalid(current_fd);
 		}
