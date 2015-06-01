@@ -135,6 +135,25 @@ namespace Map{
 		return map[index]=='.';
 	}
 
+	char owner_of(int x, int y){
+		char type = map[y*10+x]&0x7F;
+		unsigned char owner= map[y*10+x]&0x80;
+		if(type=='.' || type=='~') return 0;
+		else if(owner==0x80) return 'B';
+		else return 'R';
+	}
+
+	bool can_move(int x, int y){
+		assert(x>=0); assert(x<=9);
+		assert(y>=0); assert(x<=9);
+		unsigned char type  = map[y*10+x]&0x7F;
+		char owner = ((map[y*10+x]&0x80)==0x80)?'B':'R';
+		return (((type>='1'&&type<='9')||type=='M') &&
+		 ( (y!=0 && owner_of(x,y-1)!=owner)
+		|| (y!=9 && owner_of(x,y+1)!=owner)
+		|| (x!=0 && owner_of(x-1,y)!=owner)
+		|| (x!=9 && owner_of(x+1,y)!=owner) ));
+	}
 }
 
 // vim: set sw=4 ts=4

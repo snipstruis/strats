@@ -168,6 +168,18 @@ bool parse_move(std::string input,int* source, int* dest){
 	}
 }
 
+
+
+bool has_valid_moves(bool red){
+	for(int y=0; y<10; y+=1){
+		for(int x=0; x<10; x+=1){
+			if( Map::owner_of(x,y)==(red?'R':'B') 
+			 && Map::can_move(x,y)) return true;
+		}
+	}
+	return false;
+}
+
 void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 	if(Map::is_empty(dest)){
 		Map::map[dest]=Map::map[source];
@@ -175,7 +187,7 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 		send_empty(red_fd);
 		send_empty(blue_fd);
 	}else{
-		char other = (current_fd==red_fd)?blue_fd:red_fd;
+		int other = (current_fd==red_fd)?blue_fd:red_fd;
 
 		char source_piece, dest_piece;
 		if(current_fd==red_fd){
@@ -190,6 +202,7 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 			send_invalid(current_fd);
 			return;
 		}else if(dest_piece == 'F'){
+			printf("-- %d has captured %d's flag, %d wins!\n",current_fd, other, current_fd);
 			send_win(current_fd);
 			send_lose(other);
 			exit(0);
@@ -204,8 +217,19 @@ void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
 				Map::map[source] = '.';
 				Map::map[dest]   = '.';
 			}
-			send_attack(current_fd,    source_piece,dest_piece,victor);
-			send_attack(other,source_piece,dest_piece,victor);
+
+			if(!has_valid_moves(other==red_fd)){
+				printf("-- %d has no valid moves left, %d wins!\n",other,current_fd);
+				send_win(current_fd);
+				send_lose(other);
+			}else if(!has_valid_moves(other!=red_fd)){
+				printf("-- %d has no valid moves left, %d wins!\n",current_fd,other);
+				send_win(other);
+				send_lose(current_fd);
+			}else{
+				send_attack(current_fd,source_piece,dest_piece,victor);
+				send_attack(other,source_piece,dest_piece,victor);
+			}
 		}
 	}
 }
