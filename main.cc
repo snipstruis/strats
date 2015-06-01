@@ -9,20 +9,10 @@
 #include "stratego.h"
 
 
-inline void send_ok      (int fd) {printf("%d< OK\n",fd);      write(fd,"OK\n",3);}
-inline void send_invalid (int fd) {printf("%d< INVALID\n",fd); write(fd,"INVALID\n",8);}
-inline void send_red     (int fd) {printf("%d< RED\n",fd);     write(fd,"RED\n",4);}
-inline void send_blue    (int fd) {printf("%d< BLUE\n",fd);    write(fd,"BLUE\n",5);}
-inline void send_start   (int fd) {printf("%d< START\n",fd);   write(fd,"START\n",6);}
-inline void send_wait    (int fd) {printf("%d< WAIT\n",fd);    write(fd,"WAIT\n",5);}
-inline void send_win     (int fd) {printf("%d< WIN\n",fd);     write(fd,"WIN\n",4);}
-inline void send_lose    (int fd) {printf("%d< LOSE\n",fd);    write(fd,"LOSE\n",5);}
-inline void send_empty   (int fd) {printf("%d< EMPTY\n",fd);   write(fd,"EMPTY\n",6);}
-inline void send_attack  (int fd, char a, char d, char v){
-	printf("%d< ATTACK %c %c %c\n",fd,a,d,v);
-	static char b[14];
-	sprintf(b,"ATTACK %c %c %c\n",a,d,v);
-	write(fd,b,13);
+inline void sendln(int fd, std::string str){
+	assert(fd>=1);
+	printf("%d< %s\n",fd,str.c_str());
+	write(fd,&(str+'\n')[0],str.size()+1);
 }
 
 constexpr int max3(int const a, int const b, int const c){
@@ -50,18 +40,18 @@ void handle_setup_messages(int const fd,
 	if(*this_color==0){
 		*this_color = assign_color(*other_color, input);
 		if(*this_color=='B'){
-			send_blue(fd);
+			sendln(fd,"BLUE");
 		}else if(*this_color=='R'){
-			send_red(fd);
+			sendln(fd,"RED");
 		}else{
-			send_invalid(fd);
+			sendln(fd,"INVALID COLOR");
 		}
 	}else if(*pieces==0){
 		if(validate_pieces(input,pieces)){
-			send_ok(fd);
+			sendln(fd,"OK");
 		}else{
 			memset(pieces,0,40);
-			send_invalid(fd);
+			sendln(fd,"INVALID SETUP");
 		}
 	}
 	// clear read buffer
@@ -168,8 +158,6 @@ bool parse_move(std::string input,int* source, int* dest){
 	}
 }
 
-
-
 bool has_valid_moves(bool red){
 	for(int y=0; y<10; y+=1){
 		for(int x=0; x<10; x+=1){
@@ -180,117 +168,81 @@ bool has_valid_moves(bool red){
 	return false;
 }
 
-void handle_move(int source, int dest, int current_fd, int red_fd, int blue_fd){
+std::string handle_move(std::string input, bool red_turn){
+	int source, dest;
+	bool parsing_valid = parse_move(input, &source, &dest);
+
+	if(!parsing_valid) 
+		return "INVALID MOVE";
+
+	if(!red_turn){
+		source = 99-source;
+		dest   = 99-dest;
+	}
+
+	if(Map::is_in_lake(source) || Map::is_in_lake(dest))
+		return "INVALID MOVE";
+
+	char source_piece = red_turn ? Map::get_red_piece(source) : Map::get_blue_piece(source);
+
+	if(source_piece==0 || source_piece=='F' || source_piece=='B')
+		return "INVALID MOVE";
+	
+	int r = source-dest;
+	if(!((r==  1&&(dest%10!=9)) 
+	|| (r== -1&&(dest%10!=0)) 
+	|| (r== 10&&(dest<100)) 
+	|| (r==-10&&(dest>=0))))
+		return "INVALID MOVE";
+
 	if(Map::is_empty(dest)){
 		Map::map[dest]=Map::map[source];
 		Map::map[source]='.';
-		send_empty(red_fd);
-		send_empty(blue_fd);
-	}else{
-		int other = (current_fd==red_fd)?blue_fd:red_fd;
-
-		char source_piece, dest_piece;
-		if(current_fd==red_fd){
-			dest_piece   = Map::get_blue_piece(dest);
-			source_piece = Map::get_red_piece(source);
-		}else{
-		   	dest_piece   = Map::get_red_piece(dest);
-			source_piece = Map::get_blue_piece(source);
-		}
-
-		if(dest_piece == 0){
-			send_invalid(current_fd);
-			return;
-		}else if(dest_piece == 'F'){
-			printf("-- %d has captured %d's flag, %d wins!\n",current_fd, other, current_fd);
-			send_win(current_fd);
-			send_lose(other);
-			exit(0);
-		}else{
-			char victor = resolve_battle(source_piece,dest_piece);
-			if(victor==source_piece){
-				Map::map[dest] = Map::map[source];
-				Map::map[source] = '.';
-			}else if(victor==dest_piece){
-				Map::map[source] = '.';
-			}else{
-				Map::map[source] = '.';
-				Map::map[dest]   = '.';
-			}
-
-			if(!has_valid_moves(other==red_fd)){
-				printf("-- %d has no valid moves left, %d wins!\n",other,current_fd);
-				send_win(current_fd);
-				send_lose(other);
-			}else if(!has_valid_moves(other!=red_fd)){
-				printf("-- %d has no valid moves left, %d wins!\n",current_fd,other);
-				send_win(other);
-				send_lose(current_fd);
-			}else{
-				send_attack(current_fd,source_piece,dest_piece,victor);
-				send_attack(other,source_piece,dest_piece,victor);
-			}
-		}
+		return "ATTACK NONE";
 	}
+	
+	char dest_piece = red_turn ? Map::get_blue_piece(dest) : Map::get_red_piece(dest);
+
+	if(dest_piece == 0){
+		return "INVALID MOVE";
+	}
+	
+	if(dest_piece == 'F'){
+		printf("-- %s has captured the flag, %s wins!\n",
+			red_turn?"red":"blue",
+			red_turn?"blue":"red");
+		return "WIN";
+	}
+		
+	char victor = resolve_battle(source_piece,dest_piece);
+	if(victor==source_piece){
+		Map::map[dest] = Map::map[source];
+		Map::map[source] = '.';
+	}else if(victor==dest_piece){
+		Map::map[source] = '.';
+	}else{
+		Map::map[source] = '.';
+		Map::map[dest]   = '.';
+	}
+
+	if(!has_valid_moves(red_turn)){
+		printf("-- %s has no valid moves left, %s wins!\n",red_turn?"red":"blue",red_turn?"blue":"red");
+		return "WIN";
+	}
+	
+	if(!has_valid_moves(!red_turn)){
+		printf("-- %s has no valid moves left, %s wins!\n",red_turn?"blue":"red",red_turn?"red":"blue");
+		return "LOSE";
+	}
+
+	std::string output = "ATTACK ";
+	output += source_piece;
+	output += ' ';
+	output += dest_piece;
+	output += ' ';
+	output += victor;
+	return output;
 }
-
-void handle_turn(int current_fd, int red_fd, int blue_fd, bool &red_turn){
-	static size_t turnnr=1;
-	if( ( red_turn && current_fd==red_fd)
-	||  (!red_turn && current_fd==blue_fd) ){
-		// the one whose turn it is
-		std::string input = sanitized_recvline(current_fd);
-
-		int source, dest;
-		bool parsing_valid = parse_move(input, &source, &dest);
-
-		// if blue, mirror coordinates
-		if(current_fd==blue_fd){
-			source = 99-source;
-			dest   = 99-dest;
-		}
-
-		if( parsing_valid && !Map::is_in_lake(source) && !Map::is_in_lake(dest)){
-			// source and dest are both valid tiles
-
-			char source_piece;
-			if(current_fd==red_fd)
-				 source_piece = Map::get_red_piece(source);
-			else source_piece = Map::get_blue_piece(source);
-
-			if(source_piece==0 || source_piece=='F' || source_piece=='B'){
-				send_invalid(current_fd);
-				return;
-			}else{
-				// source is an ordinary, movable unit
-				int r = source-dest;
-				if((r==  1&&(dest%10!=9)) 
-				|| (r== -1&&(dest%10!=0)) 
-				|| (r== 10&&(dest<100)) 
-				|| (r==-10&&(dest>=0))){
-					handle_move(source,dest,current_fd,red_fd,blue_fd);
-				}else{
-					send_invalid(current_fd);
-					return;
-				}
-			}
-
-			printf("-- turn %zu\n",turnnr++);
-
-			// send map to other player
-			if(current_fd==red_fd) Map::send_blue_map(blue_fd);
-			else Map::send_red_map(red_fd);
-
-			red_turn = !red_turn;
-
-		}else{
-			send_invalid(current_fd);
-		}
-	}else{
-		clear_read_buf(current_fd);
-		send_wait(current_fd);
-	}
-}	
 
 int main(int argc, char** argv){
 	if(argc!=2){
@@ -305,31 +257,59 @@ int main(int argc, char** argv){
 		exit(1);
 	}
 
-	printf("server: waiting for connections...\n");
+	printf("-- server: waiting for connections...\n");
 
 	auto s = setup_game(sockfd);
 
 	Map::setup_map(s.red_pieces, s.blue_pieces);
 
-	send_start(s.red_fd);
-	Map::send_red_map(s.red_fd);
-	send_wait(s.blue_fd);
+	int  current_fd = s.red_fd;
+	int  other_fd   = s.blue_fd;
+	bool red_turn   = true;
 
-	fd_set master;
-	FD_ZERO(&master);
-	FD_SET(s.red_fd,&master);
-	FD_SET(s.blue_fd,&master);
-	bool red_turn = true;
-	while(true){
-		fd_set tmp = master;
-		int maxfd = s.red_fd>s.blue_fd?s.red_fd:s.blue_fd;
-		select(maxfd+1, &tmp, NULL, NULL, NULL);
-		for(int i=3; i<=maxfd; i+=1){
-			if(FD_ISSET(i,&tmp)){
-				handle_turn(i,s.red_fd,s.blue_fd,red_turn);
+	printf("-- turn 1\n");
+	sendln(current_fd,"DEFEND NONE");
+	bool exit = false;
+	
+	for(size_t turn=2; exit==false; turn+=1){
+		// send map
+		if(current_fd==s.red_fd) Map::send_red_map(s.red_fd);
+		else Map::send_blue_map(s.blue_fd);
+
+		while(true){
+			std::string input = sanitized_recvline(current_fd);
+			if(input.compare(0,4,"MOVE")==0){
+				std::string move = handle_move(input,red_turn);
+				if(move=="INVALID MOVE"){
+					sendln(current_fd,move);
+					continue;
+				}else if(move.compare(0,6,"ATTACK")==0){
+					sendln(current_fd,move);
+					printf("-- turn %zu (%s)\n",turn,red_turn?"red":"blue");
+					sendln(other_fd,"DEFEND"+move.substr(6));
+
+					clear_read_buf(other_fd);
+					std::swap(current_fd, other_fd);
+					red_turn=!red_turn;
+					break;
+				}else if(move=="WIN"){
+					sendln(current_fd,"WIN");
+					sendln(other_fd,"LOSE");
+					exit=true;
+					break;
+				}else if(move=="LOSE"){
+					sendln(current_fd,"LOSE");
+					sendln(other_fd,"WIN");
+					exit=true;
+					break;
+				}
+			}else{
+				sendln(current_fd,"INVALID COMMAND");
+				continue;
 			}
 		}
 	}
+
 	return 0;
 }
 
