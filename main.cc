@@ -188,12 +188,31 @@ std::string handle_move(std::string input, bool red_turn){
 	if(source_piece==0 || source_piece=='F' || source_piece=='B')
 		return "INVALID MOVE";
 	
-	int r = source-dest;
-	if(!((r==  1&&(dest%10!=9)) 
-	|| (r== -1&&(dest%10!=0)) 
-	|| (r== 10&&(dest<100)) 
-	|| (r==-10&&(dest>=0))))
-		return "INVALID MOVE";
+
+	if(source_piece=='2'){
+		int r  = source-dest;
+		int rx = r%10;
+		int ry = r/10;
+
+		int update;
+		if(rx==0 && ry!=0){
+			update = ry>0?-10:10;
+		}else if(rx!=0 && ry==0){
+			update = rx>0?-1:1;
+		}else return "INVALID MOVE";
+
+		for(int i=source+update; i!=dest; i+=update){
+			printf("-- i:%d source:%d dest:%d update:%d\n",i,source,dest,update);
+			if(!Map::is_empty(i)) return "INVALID MOVE";
+		}
+	}else{
+		int r = source-dest;
+		if(!((r==  1&&(dest%10!=9)) 
+		  || (r== -1&&(dest%10!=0)) 
+		  || (r== 10&&(dest<100)) 
+		  || (r==-10&&(dest>=0))))
+			return "INVALID MOVE";
+	}
 
 	if(Map::is_empty(dest)){
 		Map::map[dest]=Map::map[source];

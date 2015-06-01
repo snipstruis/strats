@@ -112,6 +112,7 @@ namespace Map{
 	}
 
 	char get_red_piece(size_t index){
+		assert(index>=0);
 		assert(index<100);
 		if( (0x80&map[index])==0x80 || map[index]=='.' || map[index]=='~')
 			return 0;
@@ -119,18 +120,21 @@ namespace Map{
 	}
 
 	char get_blue_piece(size_t index){
+		assert(index>=0);
 		assert(index<100);
 		if( (0x80&map[index])==0 || map[index]=='.' || map[index]=='~')
 			return 0;
 		else return map[index]&0x7F;
 	}
 
-	bool is_in_lake(int source){
-		assert(source<100);
-		return Map::map[source] == '~';
+	bool is_in_lake(int index){
+		assert(index>=0);
+		assert(index<100);
+		return Map::map[index] == '~';
 	}
 
 	bool is_empty(int index){
+		assert(index>=0);
 		assert(index<100);
 		return map[index]=='.';
 	}
