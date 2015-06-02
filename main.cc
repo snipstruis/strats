@@ -321,13 +321,17 @@ int main(int argc, char** argv){
 					exit=true;
 					break;
 				}
+			}else if(input=="SURRENDER"){
+				sendln(current_fd,"LOSE");
+				sendln(other_fd,"WIN");
+				exit=true;
+				break;
 			}else{
 				sendln(current_fd,"INVALID COMMAND");
 				continue;
 			}
 		}
 	}
-
 	return 0;
 }
 
