@@ -151,12 +151,12 @@ namespace Map{
 		assert(x>=0); assert(x<=9);
 		assert(y>=0); assert(y<=9);
 		unsigned char type  = map[y*10+x]&0x7F;
-		char opponent = ((map[y*10+x]&0x80)==0x80)?'R':'B';
+		char owner = ((map[y*10+x]&0x80)==0x80)?'B':'R';
 		return (((type>='1'&&type<='9')||type=='M') &&
-		 ( (y!=0 && owner_of(x,y-1)==opponent)
-		|| (y!=9 && owner_of(x,y+1)==opponent)
-		|| (x!=0 && owner_of(x-1,y)==opponent)
-		|| (x!=9 && owner_of(x+1,y)==opponent) ));
+		 ( (y!=0 && owner_of(x,y-1)!=owner && type!='~')
+		|| (y!=9 && owner_of(x,y+1)!=owner && type!='~')
+		|| (x!=0 && owner_of(x-1,y)!=owner && type!='~')
+		|| (x!=9 && owner_of(x+1,y)!=owner && type!='~') ));
 	}
 }
 
