@@ -149,14 +149,14 @@ namespace Map{
 
 	bool can_move(int x, int y){
 		assert(x>=0); assert(x<=9);
-		assert(y>=0); assert(x<=9);
+		assert(y>=0); assert(y<=9);
 		unsigned char type  = map[y*10+x]&0x7F;
-		char owner = ((map[y*10+x]&0x80)==0x80)?'B':'R';
+		char opponent = ((map[y*10+x]&0x80)==0x80)?'R':'B';
 		return (((type>='1'&&type<='9')||type=='M') &&
-		 ( (y!=0 && owner_of(x,y-1)!=owner)
-		|| (y!=9 && owner_of(x,y+1)!=owner)
-		|| (x!=0 && owner_of(x-1,y)!=owner)
-		|| (x!=9 && owner_of(x+1,y)!=owner) ));
+		 ( (y!=0 && owner_of(x,y-1)==opponent)
+		|| (y!=9 && owner_of(x,y+1)==opponent)
+		|| (x!=0 && owner_of(x-1,y)==opponent)
+		|| (x!=9 && owner_of(x+1,y)==opponent) ));
 	}
 }
 
