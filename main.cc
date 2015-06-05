@@ -263,12 +263,16 @@ std::string handle_move(std::string input, bool red_turn){
 }
 
 int main(int argc, char** argv){
-	if(argc!=2){
+	int sockfd;
+
+	if(argc==2){
+		sockfd=create_and_bind_socket(argv[1]);
+	}else if(argc==1){
+		sockfd=create_and_bind_socket("3720");
+	}else{
 		printf("usage: %s [portnr]\n",argv[0]);
 		exit(-1);
 	}
-
-	int sockfd = create_and_bind_socket(argv[1]);
 
 	if (listen(sockfd, 3) == -1) {
 		perror("listen");
