@@ -98,7 +98,7 @@ std::string sanitized_recvline(int fd){
 	while(true){
 		prev = c;
 		r = read(fd,&c,1);
-		if(r!=1) break;
+		if(r!=1) exit(1);
 		else if(c=='\n') {if(prev<=' '){s.pop_back();} break;}
 	 	else if(c<=' ' && prev<=' ') continue;
 		else if( (c>='A'&&c<='Z') || (c>='0'&&c<='9') ) s += c;
