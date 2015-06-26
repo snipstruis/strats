@@ -226,9 +226,9 @@ std::string handle_move(std::string input, bool red_turn){
 	}
 	
 	if(dest_piece == 'F'){
-		printf("-- %s has captured the flag, %s wins!\n",
-			red_turn?"red":"blue",
-			red_turn?"blue":"red");
+		printf("-- %s's flag has been captured, %s wins!\n",
+			red_turn?"blue":"red",
+			red_turn?"red":"blue");
 		return "WIN";
 	}
 		
