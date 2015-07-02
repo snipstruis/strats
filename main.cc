@@ -335,7 +335,7 @@ int main(int argc, char** argv){
 				break;
 
 			}else if(input.compare(0,11,"GETLASTMOVE")==0){
-				sendln(current_fd,inverse_move(last_move));
+				sendln(current_fd,"LASTMOVE "+ inverse_move(last_move));
 				continue;
 			}else{
 				sendln(current_fd,"INVALID COMMAND");
