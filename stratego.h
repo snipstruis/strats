@@ -59,6 +59,7 @@ char resolve_battle(char attacker,char defender){
 }
 
 std::string inverse_move(std::string input){
+	if(input == "NONE") return "NONE";
 	char sx,dx;
 	int  sy,dy;
 	sscanf(&input[0],"MOVE %c%d %c%d",&sx,&sy,&dx,&dy);

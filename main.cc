@@ -293,7 +293,7 @@ int main(int argc, char** argv){
 	sendln(current_fd,"DEFEND NONE");
 	bool exit = false;
 
-	std::string last_move = "";
+	std::string last_move = "NONE";
 	
 	for(size_t turn=2; exit==false; turn+=1){
 		// send map
