@@ -292,6 +292,8 @@ int main(int argc, char** argv){
 	printf("-- turn 1\n");
 	sendln(current_fd,"DEFEND NONE");
 	bool exit = false;
+
+	std::string last_move = "";
 	
 	for(size_t turn=2; exit==false; turn+=1){
 		// send map
@@ -302,6 +304,7 @@ int main(int argc, char** argv){
 			std::string input = sanitized_recvline(current_fd);
 			if(input.compare(0,4,"MOVE")==0){
 				std::string move = handle_move(input,red_turn);
+				last_move = input;
 				if(move=="INVALID MOVE"){
 					sendln(current_fd,move);
 					continue;
@@ -330,6 +333,10 @@ int main(int argc, char** argv){
 				sendln(other_fd,"WIN");
 				exit=true;
 				break;
+
+			}else if(input.compare(0,11,"GETLASTMOVE")==0){
+				sendln(current_fd,inverse_move(last_move));
+				continue;
 			}else{
 				sendln(current_fd,"INVALID COMMAND");
 				continue;

@@ -58,6 +58,21 @@ char resolve_battle(char attacker,char defender){
 	else return attacker>defender?attacker:defender;
 }
 
+std::string inverse_move(std::string input){
+	char sx,dx;
+	int  sy,dy;
+	sscanf(&input[0],"MOVE %c%d %c%d",&sx,&sy,&dx,&dy);
+	std::string output = ""; 
+	output += ('J'-(sx-'A'));
+	if((11-sy)==10) output+="10";
+	else output += (10-sy+'1');
+	output += " ";
+	output += ('J'-(dx-'A'));
+	if((11-dy)==10) output+="10";
+	else output += (10-dy+'1');
+	return output;
+}
+
 namespace Map{
 
 	static char map[100];
